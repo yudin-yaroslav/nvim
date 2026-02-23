@@ -17,7 +17,17 @@ return {
 		local lspkind = require("lspkind")
 
 		require("luasnip.loaders.from_vscode").lazy_load()
-		luasnip.config.setup({ history = true, updateevents = "TextChanged,TextChangedI" })
+		require("luasnip.loaders.from_lua").lazy_load({
+			paths = "~/.config/nvim/lua/pashtet671/snippets",
+			default_priority = 2000,
+			override_priority = true,
+		})
+		luasnip.config.setup({
+			history = true,
+			updateevents = "TextChanged,TextChangedI",
+			region_check_events = "CursorMoved,InsertEnter",
+			delete_check_events = "TextChanged,InsertLeave",
+		})
 
 		cmp.setup({
 			completion = {

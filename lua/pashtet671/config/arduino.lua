@@ -25,7 +25,7 @@ function M.detect_arduino_port(fqbn)
 end
 
 M.arduino_config = {
-	fqbn = "arduino:avr:micro",
+	fqbn = "arduino:avr:uno",
 	sketch_path = vim.fn.expand("%:p:h"),
 }
 
