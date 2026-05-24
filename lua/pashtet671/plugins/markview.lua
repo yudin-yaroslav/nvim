@@ -1,7 +1,4 @@
 return {
-	"nvim-treesitter/nvim-treesitter",
-	event = { "BufReadPre", "BufNewFile" },
-	dependencies = {
-		"windwp/nvim-ts-autotag",
-	},
+	"OXY2DEV/markview.nvim",
+	lazy = false,
 }

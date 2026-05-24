@@ -30,6 +30,11 @@ return {
 					},
 				},
 			},
+			pickers = {
+				find_files = {
+					find_command = { "rg", "--files", "--sortr=modified" },
+				},
+			},
 		})
 
 		telescope.load_extension("fzf")

@@ -42,7 +42,7 @@ return {
 				enable = true,
 			},
 
-			indent = { enable = true },
+			indent = { enable = true, disable = { "cpp", "c" } },
 
 			autotag = {
 				enable = true,

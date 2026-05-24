@@ -47,16 +47,46 @@ keymap.set("n", "<leader>tp", "<cmd>split | term python3 % <CR>", { desc = "Comp
 keymap.set(
 	"n",
 	"<leader>tg",
-	"<cmd>split | term bash -c 'if [ -f compile_flags.txt ]; then g++ @compile_flags.txt % -o %:r.out; else g++ % -o %:r.out; fi && ./%:r.out'<CR>",
-	{ desc = "Compile and run C++ (auto flags)" }
+	"<cmd>split | term bash -c 'mkdir -p build && if [ -f compile_flags.txt ]; then g++ @compile_flags.txt % -o build/%:t:r.out; else g++ % -o build/%:t:r.out; fi && ./build/%:t:r.out'<CR>",
+	{ desc = "Compile and run C++ (build dir)" }
 )
 -- c++ (CMAKE)
-keymap.set(
-	"n",
-	"<leader>tc",
-	"<cmd>split | term mkdir -p build && cd build && cmake .. && make && clear && ./%:r.out <CR>",
-	{ desc = "CMake build project" }
-)
+local function cmake_build_and_run()
+	local cwd = vim.fn.getcwd()
+	local cmake_file = cwd .. "/CMakeLists.txt"
+
+	local out_path = nil
+
+	if vim.fn.filereadable(cmake_file) == 1 then
+		for _, line in ipairs(vim.fn.readfile(cmake_file)) do
+			local match = line:match("^#%s*out%s*=%s*(.+)$")
+			if match then
+				out_path = vim.trim(match)
+				break
+			end
+		end
+	end
+
+	if not out_path then
+		out_path = "./" .. vim.fn.expand("%:r") .. ".out"
+	end
+
+	if not out_path:match("^/") then
+		out_path = "../" .. out_path
+	end
+
+	local cmd = "split | term "
+		.. "mkdir -p build && "
+		.. "cd build && "
+		.. "cmake .. && "
+		.. "make && "
+		.. "clear && "
+		.. out_path
+
+	vim.cmd(cmd)
+end
+
+keymap.set("n", "<leader>tc", cmake_build_and_run, { desc = "CMake build project" })
 
 -- latex
 keymap.set(
@@ -82,7 +112,6 @@ local arduino = require("pashtet671.config.arduino")
 
 local function run_cmd(cmd_list)
 	local cmd = table.concat(cmd_list, " ")
-	-- synchronous shell invocation, as you used before
 	vim.cmd("!" .. cmd)
 end
 
@@ -90,8 +119,6 @@ local function stop_monitor_for_port(port)
 	if not port or port == "" then
 		return
 	end
-	-- Use pkill -f to target the monitor wrapper with the specific port argument.
-	-- This kills the wrapper script which will forward the kill to the arduino-cli child.
 	vim.fn.system({ "pkill", "-f", "arduino-monitor-loop.sh " .. port })
 end
 
@@ -251,3 +278,96 @@ vim.keymap.set("i", "<A-,>", "«»<Left>", { noremap = true })
 vim.keymap.set("i", "<A-.>", "»", { noremap = true })
 
 vim.keymap.set("i", "<C-BS>", "<C-w>", { noremap = true })
+
+local function run_manim(scene)
+	local out = {}
+
+	local function push(_, data)
+		for _, l in ipairs(data or {}) do
+			if l ~= "" then
+				out[#out + 1] = l
+			end
+		end
+	end
+
+	vim.fn.jobstart({ "manim", "-pql", "main.py", scene }, {
+		pty = true,
+		stdout_buffered = true,
+		stderr_buffered = true,
+		on_stdout = push,
+		on_stderr = push,
+		on_exit = function(_, code)
+			if code == 0 then
+				return
+			end
+			vim.schedule(function()
+				local b = vim.api.nvim_create_buf(false, true)
+				local w = vim.api.nvim_open_win(b, true, {
+					relative = "editor",
+					width = math.floor(vim.o.columns * 0.51),
+					height = math.floor(vim.o.lines * 0.9),
+					row = 2,
+					col = 4,
+					style = "minimal",
+					border = "rounded",
+					title = " Manim error ",
+				})
+
+				vim.wo[w].wrap = false
+				vim.bo[b].bufhidden = "wipe"
+				vim.bo[b].swapfile = false
+
+				local term = vim.api.nvim_open_term(b, {})
+				vim.api.nvim_chan_send(term, table.concat(out, "\n") .. "\n")
+				vim.keymap.set("n", "q", function()
+					vim.api.nvim_win_close(w, true)
+				end, { buffer = b })
+			end)
+		end,
+	})
+end
+
+local cache_file = vim.fn.stdpath("cache") .. "/manim_last_scene"
+
+local function save_last_scene(scene)
+	if scene == "" then
+		return
+	end
+	vim.fn.writefile({ scene }, cache_file)
+end
+
+local function load_last_scene()
+	if vim.fn.filereadable(cache_file) == 0 then
+		return nil
+	end
+
+	local lines = vim.fn.readfile(cache_file)
+	local scene = lines[1]
+	if scene == nil or scene == "" then
+		return nil
+	end
+
+	return scene
+end
+
+vim.g.manim_last_scene = load_last_scene()
+
+vim.keymap.set("v", "<leader>tm", function()
+	vim.cmd('normal! "zy')
+	local scene = vim.fn.trim(vim.fn.getreg("z") or "")
+
+	if scene == "" then
+		return
+	end
+
+	vim.g.manim_last_scene = scene
+	save_last_scene(scene)
+	run_manim(scene)
+end, { silent = true, desc = "Run selected Manim scene" })
+
+vim.keymap.set("n", "<leader>tm", function()
+	local scene = vim.g.manim_last_scene
+	if scene and scene ~= "" then
+		run_manim(scene)
+	end
+end, { silent = true, desc = "Run last Manim scene" })

@@ -43,6 +43,10 @@ opt.langmap = "фa,иb,сc,вd,уe,аf,пg,рh,шi,оj,лk,дl,ьm,тn,щo,зp,�
 
 opt.foldmethod = "marker"
 
+opt.autoindent = true
+opt.cindent = true
+opt.smartindent = true
+
 vim.api.nvim_create_autocmd("ColorScheme", {
 	callback = function()
 		vim.cmd([[highlight WinSeparator guifg=#181818 guibg=#181818]])
@@ -53,3 +57,18 @@ vim.opt.fillchars:append({ vert = " " })
 
 vim.g.arduino_recommended_style = 0
 vim.g.python_recommended_style = 0
+
+cmd("filetype plugin indent on")
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = { "c", "cpp", "cc", "cxx", "h", "hpp" },
+	callback = function()
+		vim.opt_local.autoindent = true
+		vim.opt_local.smartindent = true
+		vim.opt_local.cindent = true
+		vim.opt_local.shiftwidth = 4
+		vim.opt_local.tabstop = 4
+		vim.opt_local.softtabstop = 4
+		vim.opt_local.expandtab = false
+		vim.opt_local.indentexpr = ""
+	end,
+})
