@@ -1,28 +1,33 @@
 return {
 	"nvim-treesitter/nvim-treesitter",
 	event = { "BufReadPre", "BufNewFile" },
+	branch = "main",
 	build = ":TSUpdate",
 	dependencies = {
 		"windwp/nvim-ts-autotag",
+		"HiPhish/rainbow-delimiters.nvim",
 	},
 
 	config = function()
-		local treesitter = require("nvim-treesitter.configs")
+		local treesitter = require("nvim-treesitter")
 		local rainbow_delimiters = require("rainbow-delimiters")
 
-		local parser_config = require("nvim-treesitter.parsers").get_parser_configs()
-		parser_config.arduino = {
+		local parsers = require("nvim-treesitter.parsers")
+		parsers.arduino = {
 			install_info = {
-				url = "/home/yudin-yaroslav/bin/tree-sitter-arduino", -- local path or git repo
-				files = { "src/parser.c", "src/scanner.c" }, -- note that some parsers also require src/scanner.c or src/scanner.cc
-				branch = "main", -- default branch in case of git repo if different from master
-				generate_requires_npm = false, -- if stand-alone parser without npm dependencies
-				requires_generate_from_grammar = false, -- if folder contains pre-generated src/parser.c
+				url = "/home/yudin-yaroslav/bin/tree-sitter-arduino",
+				files = { "src/parser.c", "src/scanner.c" },
+				branch = "main",
+				generate_requires_npm = false,
+				requires_generate_from_grammar = false,
 			},
-			filetype = "arduino", -- if filetype does not match the parser name
+			filetype = "arduino",
 		}
 
 		vim.g.rainbow_delimiters = {
+			strategy = {
+				[""] = rainbow_delimiters.strategy.global,
+			},
 			priority = { [""] = 512 },
 			highlight = { "RainbowYellow", "RainbowPurple", "RainbowBlue" },
 		}
@@ -31,23 +36,9 @@ return {
 		vim.api.nvim_set_hl(0, "RainbowPurple", { fg = "#da70d6" }) -- Purple
 		vim.api.nvim_set_hl(0, "RainbowBlue", { fg = "#179fff" }) -- Blue
 
+		require("nvim-ts-autotag").setup()
+
 		treesitter.setup({
-			rainbow = {
-				enable = true,
-				query = "rainbow-parens",
-				strategy = rainbow_delimiters.strategy.global,
-			},
-
-			highlight = {
-				enable = true,
-			},
-
-			indent = { enable = true, disable = { "cpp", "c" } },
-
-			autotag = {
-				enable = true,
-			},
-
 			ensure_installed = {
 				"json",
 				"javascript",
@@ -72,16 +63,6 @@ return {
 				"cpp",
 				"python",
 				"latex",
-			},
-
-			incremental_selection = {
-				enable = true,
-				keymaps = {
-					init_selection = "<C-space>",
-					node_incremental = "<C-space>",
-					scope_incremental = false,
-					node_decremental = "<bs>",
-				},
 			},
 		})
 	end,
