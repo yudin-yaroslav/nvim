@@ -39,7 +39,7 @@ opt.clipboard:append("unnamedplus")
 opt.splitright = true
 opt.splitbelow = true
 
-opt.langmap = "фa,иb,сc,вd,уe,аf,пg,рh,шi,оj,лk,дl,ьm,тn,щo,зp,йq,кr,ыs,еt,гu,мv,цw,чx,нy,яz"
+-- opt.langmap = "фa,иb,сc,вd,уe,аf,пg,рh,шi,оj,лk,дl,ьm,тn,щo,зp,йq,кr,ыs,еt,гu,мv,цw,чx,нy,яz"
 
 opt.foldmethod = "marker"
 
@@ -55,15 +55,15 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 
 vim.opt.fillchars:append({ vert = " " })
 
-vim.g.arduino_recommended_style = 0
 vim.g.python_recommended_style = 0
+vim.g.arduino_recommended_style = 0
 
 cmd("filetype plugin indent on")
 vim.api.nvim_create_autocmd("FileType", {
-	pattern = { "c", "cpp", "cc", "cxx", "h", "hpp" },
+	pattern = { "c", "cpp", "cc", "cxx", "h", "hpp", "arduino" },
 	callback = function()
 		vim.opt_local.autoindent = true
-		vim.opt_local.smartindent = true
+		vim.opt_local.smartindent = false
 		vim.opt_local.cindent = true
 		vim.opt_local.shiftwidth = 4
 		vim.opt_local.tabstop = 4

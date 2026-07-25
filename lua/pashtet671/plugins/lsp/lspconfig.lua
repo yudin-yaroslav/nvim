@@ -1,6 +1,6 @@
 return {
 	"neovim/nvim-lspconfig",
-	event = "VeryLazy",
+	event = "BufReadPre",
 	dependencies = {
 		"hrsh7th/nvim-cmp",
 		{ "antosha417/nvim-lsp-file-operations", config = true },
@@ -15,44 +15,98 @@ return {
 		local mason_lspconfig = require("mason-lspconfig")
 		local keymap = vim.keymap
 
-		local function on_attach(client, bufnr)
-			local opts = { buffer = bufnr, silent = true }
+		vim.api.nvim_create_autocmd("LspAttach", {
+			callback = function(args)
+				local client = vim.lsp.get_client_by_id(args.data.client_id)
+				if not client then
+					return
+				end
 
-			opts.desc = "Show LSP references"
-			keymap.set("n", "gR", "<cmd>Telescope lsp_references<CR>", opts)
+				local bufnr = args.buf
+				local opts = { buffer = bufnr, silent = true }
 
-			opts.desc = "Go to declaration"
-			keymap.set("n", "gD", vim.lsp.buf.declaration, opts)
+				opts.desc = "Show LSP references"
+				keymap.set("n", "gR", vim.lsp.buf.references, opts)
 
-			opts.desc = "Show LSP definitions"
-			keymap.set("n", "gd", "<cmd>Telescope lsp_definitions<CR>", opts)
+				opts.desc = "Go to declaration"
+				keymap.set("n", "gD", vim.lsp.buf.declaration, opts)
 
-			opts.desc = "Show LSP implementations"
-			keymap.set("n", "gi", "<cmd>Telescope lsp_implementations<CR>", opts)
+				opts.desc = "Show LSP definition"
+				keymap.set("n", "gd", vim.lsp.buf.definition, opts)
 
-			opts.desc = "Show LSP type definitions"
-			keymap.set("n", "gt", "<cmd>Telescope lsp_type_definitions<CR>", opts)
+				opts.desc = "Show LSP implementations"
+				keymap.set("n", "gi", vim.lsp.buf.implementation, opts)
 
-			opts.desc = "See available code actions"
-			keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, opts)
+				opts.desc = "Show LSP type definitions"
+				keymap.set("n", "gt", "<cmd>Telescope lsp_type_definitions<CR>", opts)
 
-			opts.desc = "Smart rename"
-			keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
+				opts.desc = "See available code actions"
+				keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, opts)
 
-			opts.desc = "Show buffer diagnostics"
-			keymap.set("n", "<leader>D", "<cmd>Telescope diagnostics bufnr=0<CR>", opts)
+				opts.desc = "Smart rename"
+				keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
 
-			opts.desc = "Show line diagnostics"
-			keymap.set("n", "<leader>dd", vim.diagnostic.open_float, opts)
+				opts.desc = "Show buffer diagnostics"
+				keymap.set("n", "<leader>D", "<cmd>Telescope diagnostics bufnr=0<CR>", opts)
 
-			opts.desc = "Show documentation for what is under cursor"
-			keymap.set("n", "K", vim.lsp.buf.hover, opts)
+				opts.desc = "Show line diagnostics"
+				keymap.set("n", "<leader>dd", vim.diagnostic.open_float, opts)
 
-			opts.desc = "Restart LSP"
-			keymap.set("n", "<leader>rs", ":LspRestart<CR>", opts)
+				opts.desc = "Show documentation for what is under cursor"
+				keymap.set("n", "K", vim.lsp.buf.hover, opts)
 
-			vim.notify("LSP attached: " .. client.name, vim.log.levels.INFO)
-		end
+				opts.desc = "Restart LSP"
+				keymap.set("n", "<leader>rs", ":LspRestart<CR>", opts)
+
+				vim.notify("LSP attached: " .. client.name, vim.log.levels.INFO)
+
+				if client.name == "svelte" then
+					vim.api.nvim_create_autocmd("BufWritePost", {
+						buffer = bufnr,
+						pattern = { "*.js", "*.ts" },
+						callback = function(ctx)
+							client.notify("$/onDidChangeTsOrJsFile", { uri = ctx.match })
+						end,
+					})
+				end
+
+				if not client._completion_patched then
+					client._completion_patched = true
+
+					-- Hijack standard API requests
+					local original_request = client.request
+					client.request = function(method, params, handler, buf_nr)
+						if method == "textDocument/completion" and handler then
+							local original_handler = handler
+							handler = function(err, result, ctx, config)
+								if type(result) == "userdata" or result == vim.NIL then
+									result = {}
+								end
+								return original_handler(err, result, ctx, config)
+							end
+						end
+						return original_request(method, params, handler, buf_nr)
+					end
+
+					-- Hijack low-level RPC requests (what nvim-cmp uses directly)
+					if client.rpc and client.rpc.request then
+						local original_rpc_request = client.rpc.request
+						client.rpc.request = function(method, params, handler, ...)
+							if method == "textDocument/completion" and handler then
+								local original_handler = handler
+								handler = function(err, result, ...)
+									if type(result) == "userdata" or result == vim.NIL then
+										result = {}
+									end
+									return original_handler(err, result, ...)
+								end
+							end
+							return original_rpc_request(method, params, handler, ...)
+						end
+					end
+				end
+			end,
+		})
 
 		local signs = { Error = " ", Warn = " ", Hint = "󰠠 ", Info = " " }
 
@@ -69,17 +123,13 @@ return {
 
 		mason.setup()
 
-		-- clangd
 		vim.lsp.config("clangd", {
-			on_attach = on_attach,
 			capabilities = capabilities,
 			cmd = { "clangd" },
 			filetypes = { "c", "cpp" },
 		})
 
-		-- lua_ls
 		vim.lsp.config("lua_ls", {
-			on_attach = on_attach,
 			capabilities = capabilities,
 			settings = {
 				Lua = {
@@ -89,24 +139,11 @@ return {
 			},
 		})
 
-		-- svelte
 		vim.lsp.config("svelte", {
-			on_attach = function(client, bufnr)
-				on_attach(client, bufnr)
-				vim.api.nvim_create_autocmd("BufWritePost", {
-					buffer = bufnr,
-					pattern = { "*.js", "*.ts" },
-					callback = function(ctx)
-						client.notify("$/onDidChangeTsOrJsFile", { uri = ctx.match })
-					end,
-				})
-			end,
 			capabilities = capabilities,
 		})
 
-		-- texlab
 		vim.lsp.config("texlab", {
-			on_attach = on_attach,
 			capabilities = capabilities,
 			filetypes = { "tex", "bib", "plaintex" },
 			settings = {
@@ -141,59 +178,51 @@ return {
 			},
 		})
 
-		-- arduino_language_server (if needed)
+		local arduino = require("pashtet671.config.arduino")
+
 		vim.lsp.config("arduino_language_server", {
-			on_attach = on_attach,
 			capabilities = capabilities,
-			filetypes = { "arduino", "ino" },
-			-- cmd = { ... },  -- Uncomment/customize as needed
+			filetypes = { "arduino" },
+			cmd = {
+				"arduino-language-server",
+				"-cli",
+				"arduino-cli",
+				"-cli-config",
+				vim.fn.expand("~/.arduino15/arduino-cli.yaml"),
+				"-clangd",
+				vim.fn.expand("~/.local/share/nvim/mason/bin/clangd"),
+				"-fqbn",
+				arduino.arduino_config.fqbn,
+			},
 		})
 
-		-- graphql
 		vim.lsp.config("graphql", {
-			on_attach = on_attach,
 			capabilities = capabilities,
 			filetypes = { "graphql", "gql", "svelte", "typescriptreact", "javascriptreact" },
 		})
 
-		-- emmet_ls
 		vim.lsp.config("emmet_ls", {
-			on_attach = on_attach,
 			capabilities = capabilities,
 			filetypes = { "typescriptreact", "javascriptreact", "css", "sass", "scss", "less", "svelte" },
 		})
 
-		-- html
 		vim.lsp.config("html", {
-			on_attach = on_attach,
 			capabilities = capabilities,
 			filetypes = { "html", "htmldjango" },
 		})
 
-		-- cssls
 		vim.lsp.config("cssls", {
-			on_attach = on_attach,
 			capabilities = capabilities,
 			filetypes = { "css", "scss", "less" },
 		})
 
-		-- pyright
 		vim.lsp.config("pyright", {
-			on_attach = on_attach,
 			capabilities = capabilities,
 			filetypes = { "python" },
 		})
 
-		-- Basic configs for non-custom servers
-		vim.lsp.config("biome", {
-			-- on_attach = on_attach,  -- Uncomment if needed
-			-- capabilities = capabilities,
-		})
-
-		vim.lsp.config("prismals", {
-			-- on_attach = on_attach,  -- Uncomment if needed
-			-- capabilities = capabilities,
-		})
+		vim.lsp.config("biome", {})
+		vim.lsp.config("prismals", {})
 
 		vim.lsp.handlers["textDocument/publishDiagnostics"] = function(_, result, ctx, config)
 			if not result.diagnostics then
@@ -211,7 +240,7 @@ return {
 
 		mason_lspconfig.setup({
 			ensure_installed = {
-				-- "arduino_language_server",
+				"arduino_language_server",
 				"svelte",
 				"graphql",
 				"emmet_ls",

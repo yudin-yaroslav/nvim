@@ -137,6 +137,47 @@ vim.api.nvim_create_user_command("ArduinoCompile", function()
 	})
 end, {})
 
+local function launch_in_terminal(argv)
+	local custom = arduino.terminal_cmd
+
+	if type(custom) == "table" and #custom > 0 then
+		vim.fn.jobstart(vim.list_extend(vim.deepcopy(custom), argv), { detach = true })
+		return true
+	end
+
+	local terminals = {
+		{ exe = "wezterm", prefix = { "wezterm", "start", "--" } },
+		{ exe = "kitty", prefix = { "kitty", "--" } },
+		{ exe = "foot", prefix = { "foot", "-e" } },
+		{ exe = "xterm", prefix = { "xterm", "-e" } },
+		{ exe = "konsole", prefix = { "konsole", "-e" } },
+		{ exe = "gnome-terminal", prefix = { "gnome-terminal", "--" } },
+		{ exe = "alacritty", prefix = { "alacritty", "-e" } },
+	}
+
+	for _, term in ipairs(terminals) do
+		if vim.fn.executable(term.exe) == 1 then
+			local cmd = vim.list_extend(vim.deepcopy(term.prefix), argv)
+			vim.fn.jobstart(cmd, { detach = true })
+			return true
+		end
+	end
+
+	return false
+end
+
+local function start_monitor(port, fqbn)
+	local ok = launch_in_terminal({
+		"arduino-monitor-loop.sh",
+		port,
+		fqbn,
+	})
+
+	if not ok then
+		vim.notify("No supported terminal emulator found; monitor not restarted.", vim.log.levels.WARN)
+	end
+end
+
 vim.api.nvim_create_user_command("ArduinoUpload", function()
 	local port, err = arduino.detect_arduino_port(arduino.arduino_config.fqbn)
 	if not port then
@@ -145,7 +186,7 @@ vim.api.nvim_create_user_command("ArduinoUpload", function()
 	end
 
 	stop_monitor_for_port(port)
-	vim.wait(300) -- 300 ms
+	vim.wait(300)
 
 	run_cmd({
 		"arduino-cli",
@@ -161,17 +202,7 @@ vim.api.nvim_create_user_command("ArduinoUpload", function()
 		vim.notify("Upload failed (exit code: " .. tostring(vim.v.shell_error) .. ")", vim.log.levels.ERROR)
 	end
 
-	if vim.fn.executable("alacritty") == 1 then
-		vim.fn.jobstart({
-			"alacritty",
-			"-e",
-			"arduino-monitor-loop.sh",
-			port,
-			arduino.arduino_config.fqbn,
-		}, { detach = true })
-	else
-		vim.notify("Alacritty not found in PATH; monitor not restarted.", vim.log.levels.WARN)
-	end
+	start_monitor(port, arduino.arduino_config.fqbn)
 end, {})
 
 vim.api.nvim_create_user_command("ArduinoSerial", function()
@@ -181,20 +212,8 @@ vim.api.nvim_create_user_command("ArduinoSerial", function()
 		return
 	end
 
-	if vim.fn.executable("alacritty") == 0 then
-		vim.notify("Alacritty not found in PATH", vim.log.levels.ERROR)
-		return
-	end
-
-	vim.fn.jobstart({
-		"alacritty",
-		"-e",
-		"arduino-monitor-loop.sh",
-		port,
-		arduino.arduino_config.fqbn,
-	}, { detach = true })
+	start_monitor(port, arduino.arduino_config.fqbn)
 end, {})
-
 keymap.set("n", "<leader>taa", function()
 	vim.cmd("ArduinoCompile")
 	if vim.v.shell_error == 0 then
