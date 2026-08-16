@@ -63,7 +63,7 @@ vim.api.nvim_create_autocmd("FileType", {
 	pattern = { "c", "cpp", "cc", "cxx", "h", "hpp", "arduino" },
 	callback = function()
 		vim.opt_local.autoindent = true
-		vim.opt_local.smartindent = false
+		vim.opt_local.smartindent = true
 		vim.opt_local.cindent = true
 		vim.opt_local.shiftwidth = 4
 		vim.opt_local.tabstop = 4
@@ -74,3 +74,9 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 vim.g.clipboard = "osc52"
+
+vim.filetype.add({
+	extension = {
+		h = "c",
+	},
+})

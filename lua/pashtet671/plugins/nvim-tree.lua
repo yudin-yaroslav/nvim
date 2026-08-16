@@ -9,6 +9,11 @@ return {
 		vim.g.loaded_netrwPlugin = 1
 
 		nvimtree.setup({
+			sort = {
+				sorter = "extension",
+				folders_first = true,
+			},
+
 			view = {
 				width = 35,
 				relativenumber = true,
@@ -44,7 +49,6 @@ return {
 			git = { ignore = false },
 		})
 
-		-- 🔑 THIS is the actual :cd fix
 		vim.api.nvim_create_autocmd("DirChanged", {
 			callback = function()
 				pcall(api.tree.change_root, vim.fn.getcwd())

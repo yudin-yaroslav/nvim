@@ -24,14 +24,23 @@ return {
 					stdin = true,
 				},
 				arduino = { "clang_format" },
+				c = { "clang_format" },
 			},
 			stop_after_first = true,
-			format_on_save = {
-				lsp_fallback = true,
-				async = false,
-				timeout_ms = 1000,
-				keep_last_line = true,
-			},
+			format_on_save = function(bufnr)
+				local file = vim.api.nvim_buf_get_name(bufnr)
+
+				if file:match("dwm/config.def.h$") then
+					return
+				end
+
+				return {
+					lsp_fallback = true,
+					async = false,
+					timeout_ms = 1000,
+					keep_last_line = true,
+				}
+			end,
 		})
 
 		vim.keymap.set({ "n", "v" }, "<leader>mp", function()
