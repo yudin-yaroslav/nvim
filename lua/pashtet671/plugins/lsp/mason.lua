@@ -21,6 +21,7 @@ return {
 				"stylua",
 				"isort",
 				"autopep8",
+				"eslint_d",
 			},
 		})
 	end,

@@ -5,6 +5,16 @@ return {
 		local conform = require("conform")
 
 		conform.setup({
+			formatters = {
+				prettier = {
+					prepend_args = {
+						"--tab-width",
+						"4",
+						"--use-tabs",
+					},
+				},
+			},
+
 			formatters_by_ft = {
 				javascript = { "prettier" },
 				typescript = { "prettier" },
@@ -18,15 +28,20 @@ return {
 				markdown = { "prettier" },
 				graphql = { "prettier" },
 				liquid = { "prettier" },
+
 				lua = { "stylua" },
+
 				python = {
 					exe = "autopep8",
 					stdin = true,
 				},
+
 				arduino = { "clang_format" },
 				c = { "clang_format" },
 			},
+
 			stop_after_first = true,
+
 			format_on_save = function(bufnr)
 				local file = vim.api.nvim_buf_get_name(bufnr)
 
