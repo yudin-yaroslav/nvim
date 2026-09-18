@@ -58,8 +58,6 @@ return {
 				opts.desc = "Restart LSP"
 				keymap.set("n", "<leader>rs", ":LspRestart<CR>", opts)
 
-				vim.notify("LSP attached: " .. client.name, vim.log.levels.INFO)
-
 				if client.name == "svelte" then
 					vim.api.nvim_create_autocmd("BufWritePost", {
 						buffer = bufnr,
@@ -123,6 +121,19 @@ return {
 
 		mason.setup()
 
+		vim.lsp.config("astro", {
+			capabilities = capabilities,
+			filetypes = { "astro" },
+			init_options = {
+				typescript = {
+					tsdk = vim.fn.stdpath("data")
+						.. "/mason/packages/typescript-language-server/node_modules/typescript/lib",
+				},
+			},
+		})
+
+		vim.lsp.enable("astro")
+
 		vim.lsp.config("clangd", {
 			capabilities = capabilities,
 			cmd = { "clangd" },
@@ -135,6 +146,22 @@ return {
 				Lua = {
 					completion = { callSnippet = "Replace" },
 					diagnostics = { globals = { "vim" }, disable = { "missing-fields" } },
+				},
+			},
+		})
+
+		vim.lsp.config("ts_ls", {
+			capabilities = capabilities,
+			filetypes = {
+				"javascript",
+				"javascriptreact",
+				"typescript",
+				"typescriptreact",
+			},
+			init_options = {
+				typescript = {
+					tsdk = vim.fn.stdpath("data")
+						.. "/mason/packages/typescript-language-server/node_modules/typescript/lib",
 				},
 			},
 		})
@@ -252,9 +279,15 @@ return {
 				"cssls",
 				"texlab",
 				"clangd",
+				"astro",
+				"ts_ls",
 			},
 			automatic_installation = true,
-			automatic_enable = true,
+			automatic_enable = {
+				exclude = {
+					"astro",
+				},
+			},
 		})
 	end,
 }

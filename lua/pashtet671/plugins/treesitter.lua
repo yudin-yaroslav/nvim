@@ -18,7 +18,9 @@ return {
 		})
 	end,
 	config = function()
-		require("nvim-treesitter").setup({})
+		require("nvim-treesitter").setup({ highlight = {
+			enable = true,
+		} })
 		require("nvim-ts-autotag").setup()
 
 		local ensure_installed = {
@@ -46,6 +48,8 @@ return {
 			"python",
 			"latex",
 			"arduino",
+			"astro",
+			"sql",
 		}
 		require("nvim-treesitter").install(ensure_installed)
 	end,

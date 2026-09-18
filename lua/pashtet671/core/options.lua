@@ -41,7 +41,9 @@ opt.splitbelow = true
 
 -- opt.langmap = "фa,иb,сc,вd,уe,аf,пg,рh,шi,оj,лk,дl,ьm,тn,щo,зp,йq,кr,ыs,еt,гu,мv,цw,чx,нy,яz"
 
-opt.foldmethod = "marker"
+-- vim.opt.foldmethod = "expr"
+-- vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+vim.opt.foldenable = true
 
 opt.autoindent = true
 opt.cindent = true

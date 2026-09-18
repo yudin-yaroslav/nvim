@@ -88,6 +88,15 @@ end
 
 keymap.set("n", "<leader>tc", cmake_build_and_run, { desc = "CMake build project" })
 
+-- bun
+local function bun_dev()
+	vim.cmd("split | terminal bun run dev")
+end
+
+keymap.set("n", "<leader>tb", bun_dev, {
+	desc = "Start Bun dev server",
+})
+
 -- latex
 keymap.set(
 	"n",
