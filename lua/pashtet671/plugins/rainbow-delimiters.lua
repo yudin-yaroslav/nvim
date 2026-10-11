@@ -24,7 +24,7 @@ return {
 				[""] = "rainbow-delimiters",
 			},
 			priority = {
-				[""] = 512, -- Override standard TS punctuation layers completely
+				[""] = 512,
 			},
 			highlight = {
 				"RainbowDelimiterYellow",
@@ -32,7 +32,6 @@ return {
 				"RainbowDelimiterBlue",
 			},
 			condition = function(buf)
-				-- Fail-safe check to make sure TS is attached right before the scan
 				local ft = vim.bo[buf].filetype
 				local lang = vim.treesitter.language.get_lang(ft)
 				if lang then

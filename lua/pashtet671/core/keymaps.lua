@@ -50,6 +50,7 @@ keymap.set(
 	"<cmd>split | term bash -c 'mkdir -p build && if [ -f compile_flags.txt ]; then g++ @compile_flags.txt % -o build/%:t:r.out; else g++ % -o build/%:t:r.out; fi && ./build/%:t:r.out'<CR>",
 	{ desc = "Compile and run C++ (build dir)" }
 )
+
 -- c++ (CMAKE)
 local function cmake_build_and_run()
 	local cwd = vim.fn.getcwd()
@@ -68,25 +69,25 @@ local function cmake_build_and_run()
 	end
 
 	if not out_path then
-		out_path = "./" .. vim.fn.expand("%:r") .. ".out"
+		out_path = "./build/" .. vim.fn.expand("%:t:r")
 	end
 
-	if not out_path:match("^/") then
-		out_path = "../" .. out_path
-	end
-
-	local cmd = "split | term "
-		.. "mkdir -p build && "
-		.. "cd build && "
-		.. "cmake .. && "
-		.. "make && "
-		.. "clear && "
-		.. out_path
+	local cmd = "split | term " .. "cmake -S . -B build && " .. "cmake --build build && " .. "clear && " .. out_path
 
 	vim.cmd(cmd)
 end
-
 keymap.set("n", "<leader>tc", cmake_build_and_run, { desc = "CMake build project" })
+-- c++ (CMAKE)
+local function cmake_test()
+	local cmd = "cmake -S . -B build && "
+		.. "cmake --build build && "
+		.. "clear && "
+		.. "ctest --test-dir build --output-on-failure"
+
+	vim.cmd("split | term " .. cmd)
+end
+
+keymap.set("n", "<leader>tt", cmake_test, { desc = "Run CMake tests" })
 
 -- bun
 local function bun_dev()
